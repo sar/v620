@@ -1,10 +1,8 @@
 # syntax=docker/dockerfile:1.4
 # =============================================================================
-# vLLM v0.2x.x on AMD gfx1030 (Radeon Pro V620) — ROCm 7.x.x
+# vLLM v0.21.x on AMD gfx1030 (Radeon Pro V620) — ROCm 7.2.3
 # =============================================================================
 ARG BASE_IMAGE=rocm/dev-ubuntu-24.04:7.2.3-complete
-ARG VLLM_VERSION=v0.21.0
-
 FROM ${BASE_IMAGE} AS base
 
 # =============================================================================
@@ -99,6 +97,7 @@ RUN pip install --no-cache-dir \
     "lm-format-enforcer>=0.10.0"
 
 # Clone VLLM_VERSION
+ARG VLLM_VERSION=v0.21.0
 RUN git clone --depth 1 --branch ${VLLM_VERSION} https://github.com/vllm-project/vllm.git /workspace/vllm-src
 WORKDIR /workspace/vllm-src
 
