@@ -1,6 +1,6 @@
-# 🐳 vLLM ROCm 7.2.3 Docker Image (v0.20.0)
+# 🐳 vLLM ROCm 7.x.x Docker Image (v0.2x.x)
 
-Optimized Docker image for running **vLLM v0.20.0** on AMD GPUs using **ROCm 7.2.3**. Built for headless CI environments (GitHub Actions, GitLab CI) with zero GPU dependencies during compilation. Ready for inference on RDNA2/3 and CDNA architectures.
+Optimized Docker image for running **vLLM v0.2x.x** on AMD GPUs using **ROCm 7.x.x**. Built for headless CI environments (GitHub Actions, GitLab CI) with zero GPU dependencies during compilation. Ready for inference on RDNA2/3 and CDNA architectures.
 
 ## 📋 Table of Contents
 - [AMD GPU Compatibility](#-amd-gpu-compatibility)
@@ -28,7 +28,7 @@ Optimized Docker image for running **vLLM v0.20.0** on AMD GPUs using **ROCm 7.2
 
 ## 🛠 Prerequisites
 
-- **Host OS**: Ubuntu 22.04/24.04 (recommended)
+- **Host OS**: Ubuntu 24.04 (recommended)
 - **Docker**: `24.0+` with `buildx` enabled
 - **GPU**: AMD ROCm-compatible GPU (see matrix above)
 - **Drivers**: Host must have ROCm drivers installed (`amdgpu-install` or distro packages)
@@ -41,7 +41,7 @@ Optimized Docker image for running **vLLM v0.20.0** on AMD GPUs using **ROCm 7.2
 
 ### Local Build
 ```bash
-DOCKER_BUILDKIT=1 docker build -t vllm-rocm:7.2.3 .
+DOCKER_BUILDKIT=1 docker build -t vllm-rocm:7.x.x .   # Replace Version
 ```
 
 ### GitHub Actions (CI/CD)
@@ -62,7 +62,7 @@ jobs:
         with:
           context: .
           push: false
-          tags: vllm-rocm:7.2.3
+          tags: vllm-rocm:7.x.x   # Replace Version
           cache-from: type=gha
           cache-to: type=gha,mode=max
 ```
@@ -83,7 +83,7 @@ docker run -d --rm \
   -p 8000:8000 \
   -v /path/to/models:/workspace/models \
   -e HUGGING_FACE_HUB_TOKEN=${HF_TOKEN} \
-  vllm-rocm:7.2.3 \
+  vllm-rocm:7.x.x \   # Replace Version
   --model /workspace/models/your-model \
   --max-model-len 8192 \
   --gpu-memory-utilization 0.9
@@ -106,7 +106,7 @@ Keep the Dockerfile unchanged. Launch with `--entrypoint`:
 docker run -it --rm \
   --device=/dev/kfd --device=/dev/dri --group-add video --ipc=host \
   --entrypoint /bin/bash \
-  vllm-rocm:7.2.3
+  vllm-rocm:7.x.x
 ```
 
 ### Option 2: Bake into Dockerfile
@@ -120,7 +120,7 @@ CMD ["python", "-m", "vllm.entrypoints.openai.api_server"]
 EXPOSE 8000
 CMD ["/bin/bash"]
 ```
-Then run normally: `docker run -it --rm --device=/dev/kfd --device=/dev/dri --group-add video --ipc=host vllm-rocm:7.2.3`
+Then run normally: `docker run -it --rm --device=/dev/kfd --device=/dev/dri --group-add video --ipc=host vllm-rocm:7.x.x`
 
 > 💡 **Tip**: Use Option 1 for development/debugging. It preserves the production `CMD` while giving you an interactive shell on demand.
 
@@ -145,7 +145,7 @@ Then run normally: `docker run -it --rm --device=/dev/kfd --device=/dev/dri --gr
 
 | Issue | Solution |
 |-------|----------|
-| `ImportError: libMIOpen.so.1` / `libhipfft.so.0` | Use `rocm/dev-ubuntu-24.04:7.2.3-complete` base (already fixed in Dockerfile) |
+| `ImportError: libMIOpen.so.1` / `libhipfft.so.0` | Use `rocm/dev-ubuntu-24.04:7.x.x-complete` base (already fixed in Dockerfile) |
 | `ROCm kernel failed to compile` | Clear cache: `rm -rf ~/.cache/torch_extensions ~/.triton` inside container |
 | `CUDA out of memory` (shows as HIP) | Reduce `--gpu-memory-utilization 0.8`, lower `--max-model-len`, or use quantization (`--quantization awq`) |
 | First run is extremely slow | Triton/hipcc compiles kernels on first load. Subsequent runs use cached `.so` files in `~/.cache/torch_extensions` |

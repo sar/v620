@@ -1,13 +1,17 @@
 name: Build vLLM ROCm gfx1030
 
 on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  
+  # Automatically runs when you push changes to Dockerfile.base
   push:
-    branches:
-      - main
-  workflow_dispatch: # Allows manual triggering from the Actions tab
+    paths:
+      - 'vllm/Dockerfile'
 
 env:
   REGISTRY: ghcr.io
+  BASE_IMAGE_NAME: ${{ github.repository_owner }}/rocm-base
   IMAGE_NAME: ${{ github.repository }}/vllm-gfx1030
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Opt-into Node 24 to suppress deprecation warnings
 
@@ -72,7 +76,9 @@ jobs:
           context: .
           file: ./vllm/Dockerfile
           push: true
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=min

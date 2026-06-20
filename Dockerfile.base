@@ -1,0 +1,36 @@
+FROM rocm/dev-ubuntu-24.04:7.2.4-complete
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 1 Install OS dependencies (Added cmake, ninja, python3.12, rocm-cmake for vLLM builds)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    curl \
+    wget \
+    unzip \
+    pkg-config \
+    libssl-dev \
+    ca-certificates \
+    cmake \
+    ninja-build \
+    python3.12 \
+    python3.12-dev \
+    python3.12-venv \
+    rocm-cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2 Install Bun
+RUN curl -fsSL https://bun.sh/install | bash
+
+# 3 Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+# 4 Set Environment Variables for Headless Build
+ENV HSA_OVERRIDE_GFX_VERSION=10.3.0
+ENV AMDGPU_TARGETS=gfx1030
+
+# 5 Update PATH for Bun and Rust
+ENV PATH="/root/.bun/bin:/root/.cargo/bin:${PATH}"
+
+WORKDIR /app
