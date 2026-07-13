@@ -1,6 +1,6 @@
 # AMD v620 Solutions Library: ROCm Build System for Inference+Training on RDNA2/GFX1030
 
-![AMD](https://www.amd.com/content/dam/amd/en/images/logos/products/795377-amd-radeon-pro.jpg)
+![AMD](.static/amd_radeon_pro_header.jpg)
 
 ## Overview
 
