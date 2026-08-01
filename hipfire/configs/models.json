@@ -1,0 +1,8 @@
+{
+  "qwen3_8b:q8": {
+    "repo": "",
+    "file": "qwen3-8b.q8.hfq",
+    "local_path": "/app/model/hipfire/hfq/qwen3-8b.q8.hfq",
+    "registered_at": "2024-01-01T12:00:00Z"
+  }
+}
