@@ -42,12 +42,16 @@ cargo build --release \
 echo "Building Quantizer and Tools..."
 cargo build --release -p hipfire-quantize
 
+# Optional: Build the new Rust CLI if it's in the workspace
+# (Uncomment if you need the actual hipfire CLI tool, it will end up in target/release)
+cargo build --release -p hipfire-cli 
+
 # ─── Install Binaries (Auto-Detect) ─────────────────────────
 echo ""
 echo "Installing binaries to $BIN_DIR..."
 mkdir -p "$BIN_DIR"
 
-# 1. Copy binaries from target/release (catches 'hipfire-quantize')
+# 1. Copy binaries from target/release (catches 'hipfire-quantize' and potentially 'hipfire')
 find target/release -maxdepth 1 -type f -executable -exec cp -f {} "$BIN_DIR/" \;
 
 # 2. Copy binaries from target/release/examples (catches 'daemon', 'infer')
@@ -57,29 +61,6 @@ fi
 
 echo "  Binaries installed."
 ls -la "$BIN_DIR"
-
-# ─── Install CLI ────────────────────────────────────────────
-mkdir -p "$HIPFIRE_DIR/cli"
-cp cli/registry.json "$HIPFIRE_DIR/cli/"
-cp cli/package.json  "$HIPFIRE_DIR/cli/"
-cp cli/index.ts      "$HIPFIRE_DIR/cli/"
-
-# Create wrapper
-cat > "$BIN_DIR/hipfire" << 'WRAPPER'
-#!/bin/bash
-set -e
-if command -v bun >/dev/null 2>&1; then
-    BUN=bun;
-elif [ -x "$HOME/.bun/bin/bun" ]; then
-    BUN="$HOME/.bun/bin/bun";
-else
-    echo "Error: bun not found." >&2;
-    exit 1;
-fi
-exec "$BUN" run "$HOME/.hipfire/cli/index.ts" "$@"
-WRAPPER
-chmod +x "$BIN_DIR/hipfire"
-echo "  CLI installed."
 
 # ─── Install Kernels ────────────────────────────────────────
 echo ""

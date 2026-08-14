@@ -1,4 +1,4 @@
-# Add ARG to accept the base image location dynamically
+# Add ARG to accept the base image dynamically
 ARG BASE_IMAGE=rocm-base
 FROM ${BASE_IMAGE}
 
@@ -6,7 +6,7 @@ FROM ${BASE_IMAGE}
 WORKDIR /app
 
 # 1 Clone source code repository
-RUN git clone --depth 1 https://github.com/Kaden-Schutt/hipfire.git hipfire
+RUN git clone --depth 1 -b beta https://github.com/Kaden-Schutt/hipfire.git hipfire
 
 # 2 Copy scripts
 COPY install_hipfire.sh /app/install_hipfire.sh
