@@ -6,6 +6,7 @@ FROM ${BASE_IMAGE}
 WORKDIR /app
 
 # 1 Clone source code repository
+# Beta branch
 RUN git clone --depth 1 -b beta https://github.com/Kaden-Schutt/hipfire.git hipfire
 
 # 2 Copy scripts
