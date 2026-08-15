@@ -5,7 +5,7 @@ FROM ${BASE_IMAGE}
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Fix GitHub Issue #25807: 
-# Recent ROCm packaging sometimes fails to register /opt/rocm/lib with the dynamic loader.
+# ROCm packaging sometimes fails to register /opt/rocm/lib with the dynamic loader.
 # Prepending this ensures libhipblas.so and other ROCm libs are found at runtime.
 ENV LD_LIBRARY_PATH=/opt/rocm/core-7.14/lib:$LD_LIBRARY_PATH
 
