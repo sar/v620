@@ -1,5 +1,7 @@
 # AMD v620 Solutions Library: ROCm Build System for Inference+Training on RDNA2/GFX1030
 
+[![Build and Publish Base Image](https://github.com/sar/v620/actions/workflows/build-base.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-base.yml) [![Build Llama.cpp ROCm Image](https://github.com/sar/v620/actions/workflows/build-llamacpp.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-llamacpp.yml) [![Build vLLM ROCm gfx1030](https://github.com/sar/v620/actions/workflows/build-vllm.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-vllm.yml) [![Build Hipfire ROCm gfx1030](https://github.com/sar/v620/actions/workflows/build-hipfire.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-hipfire.yml)
+
 ![AMD](.static/amd_radeon_pro_header.jpg)
 
 ## Overview
@@ -8,6 +10,7 @@
 
 - **`v620/rocm-base`** – ROCm 7.2.x + build toolchain + Bun/Rust
 - **`v620/vllm-gfx1030`** – Compiled vLLM + PyTorch + Triton for RDNA2 inference
+- **`v620/llamacpp-gfx1030`** - Compiled llama.cpp inference image for x86 with ROCm Support
 
 ---
 
