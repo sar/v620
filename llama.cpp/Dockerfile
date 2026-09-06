@@ -5,13 +5,13 @@ FROM ${BASE_IMAGE}
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Fix GitHub Issue #25807: 
-# ROCm packaging sometimes fails to register /opt/rocm/lib with the dynamic loader.
+# Recent ROCm packaging sometimes fails to register /opt/rocm/lib with the dynamic loader.
 # Prepending this ensures libhipblas.so and other ROCm libs are found at runtime.
 ENV LD_LIBRARY_PATH=/opt/rocm/core-7.14/lib:$LD_LIBRARY_PATH
 
 WORKDIR /app
 
-# Clone llama.cpp source code
+# Clone llama.cpp source code (branch:main)
 RUN git clone --depth 1 https://github.com/ggml-org/llama.cpp.git /app/llama.cpp
 
 WORKDIR /app/llama.cpp
@@ -30,6 +30,14 @@ RUN LD_LIBRARY_PATH=/opt/rocm/core-7.14/lib:$LD_LIBRARY_PATH \
         -DGGML_CUDA_FA_ALL_QUANTS=ON \
         -DGGML_CURL=OFF \
         -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_CXX_FLAGS="-march=haswell" \
+        -DCMAKE_C_FLAGS="-march=haswell" \
+        -DGGML_AVX512=OFF \
+        -DGGML_AVX2=ON \
+        -DGGML_AVX=ON \
+        -DGGML_FMA=ON \
+        -DGGML_F16C=ON \
+        -DGGML_BMI2=ON \
     && cmake --build build --config Release --target llama-server llama-cli llama-bench -- -j $(nproc)
 
 # Set PATH
