@@ -1,6 +1,16 @@
 # AMD v620 Solutions Library: ROCm Build System for Inference+Training on RDNA2/GFX1030
 
-[![Build and Publish Base Image](https://github.com/sar/v620/actions/workflows/build-base.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-base.yml) [![Build Llama.cpp ROCm Image](https://github.com/sar/v620/actions/workflows/build-llamacpp.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-llamacpp.yml) [![Build vLLM ROCm gfx1030](https://github.com/sar/v620/actions/workflows/build-vllm.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-vllm.yml) [![Build Hipfire ROCm gfx1030](https://github.com/sar/v620/actions/workflows/build-hipfire.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-hipfire.yml)
+[![Build and Publish Base Image](https://github.com/sar/v620/actions/workflows/build-base.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-base.yml) 
+
+[![Build and Publish Dev Environment Image](https://github.com/sar/v620/actions/workflows/build-dev.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-dev.yml)
+
+[![Build and Publish AMD GPU Validation Image](https://github.com/sar/v620/actions/workflows/build-amd-validation.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-amd-validation.yml)
+
+[![Build vLLM ROCm gfx1030](https://github.com/sar/v620/actions/workflows/build-vllm.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-vllm.yml) 
+
+[![Build Llama.cpp ROCm Image](https://github.com/sar/v620/actions/workflows/build-llamacpp.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-llamacpp.yml) 
+
+[![Build Hipfire ROCm gfx1030](https://github.com/sar/v620/actions/workflows/build-hipfire.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-hipfire.yml)
 
 ![AMD](.static/amd_radeon_pro_header.jpg)
 
