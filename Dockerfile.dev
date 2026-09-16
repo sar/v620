@@ -1,0 +1,103 @@
+# Add ARG to accept the base image dynamically
+ARG BASE_IMAGE=rocm-base
+FROM ${BASE_IMAGE}
+
+# SET workdir
+WORKDIR /app
+
+# Avoid interactive prompts during pkg installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install comprehensive C++ development tools, libraries, and utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Build tools & compilers
+    build-essential \
+    cmake \
+    ninja-build \
+    ccache \
+    pkg-config \
+    autoconf \
+    automake \
+    libtool \
+    # Debugging, profiling, and static analysis
+    gdb \
+    valgrind \
+    lcov \
+    cppcheck \
+    clang-format \
+    clang-tidy \
+    # Networking & Diagnostic Tools
+    nmap \
+    curl \
+    wget \
+    git \
+    ca-certificates \
+    htop \
+    lsof \
+    strace \
+    tcpdump \
+    iputils-ping \
+    dnsutils \
+    net-tools \
+    # Modern CLI Tools
+    ripgrep \
+    fd-find \
+    tmux \
+    screen \
+    vim \
+    nano \
+    zsh \
+    # JSON & YAML processors
+    jq \
+    yq \
+    # C++ Development Libraries
+    nlohmann-json3-dev \
+    libfmt-dev \
+    libspdlog-dev \
+    libboost-all-dev \
+    libprotobuf-dev \
+    protobuf-compiler \
+    libgrpc++-dev \
+    libgflags-dev \
+    libgoogle-glog-dev \
+    libgtest-dev \
+    libgmock-dev \
+    libbenchmark-dev \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    liblzma-dev \
+    libffi-dev \
+    libsqlite3-dev \
+    # Multimedia / FFmpeg
+    ffmpeg \
+    libavcodec-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libswscale-dev \
+    libswresample-dev \
+    # Graphics / Vulkan
+    libsdl2-dev \
+    libglew-dev \
+    libglfw3-dev \
+    libvulkan-dev \
+    vulkan-tools \
+    # Python 3 (often needed for dev scripts)
+    python3 \
+    python3-pip \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install the Go version of yq (mikefarah/yq) 
+# The apt python-yq wrapper behaves differently than the standard CLI tool expected by most developers
+RUN wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && \
+    chmod +x /usr/local/bin/yq
+
+# Set up ccache to speed up subsequent rebuilds
+ENV CCACHE_DIR=/ccache
+ENV PATH="/usr/lib/ccache:${PATH}"
+RUN mkdir -p /ccache && chmod 777 /ccache
+
+# Default command
+CMD ["/bin/bash"]
