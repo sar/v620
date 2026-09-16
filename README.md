@@ -1,26 +1,19 @@
 # AMD v620 Solutions Library: ROCm Build System for Inference+Training on RDNA2/GFX1030
 
-[![Build and Publish Base Image](https://github.com/sar/v620/actions/workflows/build-base.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-base.yml) 
-
-[![Build and Publish Dev Environment Image](https://github.com/sar/v620/actions/workflows/build-dev.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-dev.yml)
-
-[![Build and Publish AMD GPU Validation Image](https://github.com/sar/v620/actions/workflows/build-amd-validation.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-amd-validation.yml)
-
-[![Build vLLM ROCm gfx1030](https://github.com/sar/v620/actions/workflows/build-vllm.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-vllm.yml) 
-
-[![Build Llama.cpp ROCm Image](https://github.com/sar/v620/actions/workflows/build-llamacpp.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-llamacpp.yml) 
-
-[![Build Hipfire ROCm gfx1030](https://github.com/sar/v620/actions/workflows/build-hipfire.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-hipfire.yml)
-
 ![AMD](.static/amd_radeon_pro_header.jpg)
 
 ## Overview
 
-**v620 Solutions Library** is a containerized CI/CD build system that compiles **vLLM v0.25.x**, **llama.cpp**, and **HipFire** from source against **ROCm 7.2.x** for **AMD Radeon PRO V620** and RDNA2 GPUS (gfx1030 target). Currently, two seperate images are published to the GitHub Container Registry on every commit:
+**v620 Solutions Library** is a containerized CI/CD build system that compiles **vLLM v0.28.x**, **llama.cpp**, and **HipFire** from source against **ROCm 7.x.x** for **AMD Radeon PRO V620** and RDNA2 GPUS (gfx1030 target). Currently, two seperate images are published to the GitHub Container Registry on every commit:
 
-- **`v620/rocm-base`** – ROCm 7.2.x + build toolchain + Bun/Rust
-- **`v620/vllm-gfx1030`** – Compiled vLLM + PyTorch + Triton for RDNA2 inference
-- **`v620/llamacpp-gfx1030`** - Compiled llama.cpp inference image for x86 with ROCm Support
+- **`v620/rocm-base`** – ROCm 7.x.x + build toolchain + Bun/Rust [![Build and Publish Base Image](https://github.com/sar/v620/actions/workflows/build-base.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-base.yml)
+- **`v620/rocm-dev`** - Development image with C tools deps baked-in [![Build and Publish Dev Environment Image](https://github.com/sar/v620/actions/workflows/build-dev.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-dev.yml)
+- **`v620/amd-validation`** - AMD GPU testing libraries and utils (RCCL, Memtest, etc) [![Build and Publish AMD GPU Validation Image](https://github.com/sar/v620/actions/workflows/build-amd-validation.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-amd-validation.yml)
+- **`v620/vllm-gfx1030`** – Compiled vLLM + PyTorch + Triton for RDNA2 inference [![Build vLLM ROCm gfx1030](https://github.com/sar/v620/actions/workflows/build-vllm.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-vllm.yml) 
+- **`v620/llamacpp-gfx1030`** - Compiled llama.cpp inference image for x86 with ROCm Support [![Build Llama.cpp ROCm Image](https://github.com/sar/v620/actions/workflows/build-llamacpp.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-llamacpp.yml) 
+- **`v620/hipfire-gfx1030`** - RDNA2 native inference engine with custom tuned kernels [![Build Hipfire ROCm gfx1030](https://github.com/sar/v620/actions/workflows/build-hipfire.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-hipfire.yml)
+- **`v620/modelscope-gfx1030`** - ModelScope Swift based training image for CPT,PEFT,LoRA,QLoRA workloads
+- **`v620/pytrain-gfx1030`** - PyTorch native training image with Transformers, Unsloth, PEFT, HuggingFace libraries
 
 ---
 
