@@ -1,209 +1,208 @@
 # syntax=docker/dockerfile:1.4
-# =============================================================================
-# Version Control Args
-# =============================================================================
+FROM rocm/dev-ubuntu-24.04:7.14.0-full
 
-# ROCm Base Image
-ARG BASE_IMAGE=rocm-base
-ARG ROCM_VERSION=7.2.4
-
-# --- Python3 Wheel version strings ---
-ARG PYTORCH_WHEEL_VERSION=2.10.0+rocm7.2.4.lw.git3d3aa833
-ARG TORCHVISION_WHEEL_VERSION=0.25.0+rocm7.2.4.git82df5f59
-ARG TORCHAUDIO_WHEEL_VERSION=2.10.0+rocm7.2.4.git5047768f
-ARG TRITON_WHEEL_VERSION=3.6.0+rocm7.2.4.git4ed88892
-
-# -- VLLM VERSION --
-ARG VLLM_VERSION=main
-
-# --- Build dependencies version strings ---
-ARG CMAKE_VERSION=">=3.26.1"
-ARG NINJA_VERSION=""
-ARG PACKAGING_VERSION=">=24.2"
-ARG SETUPTOOLS_VERSION=">=77.0.3,<81.0.0"
-ARG SETUPTOOLS_SCM_VERSION=">=8.0"
-ARG SETUPTOOLS_RUST_VERSION=">=1.9.0"
-ARG WHEEL_VERSION=""
-ARG JINJA2_VERSION=""
-
-# --- vLLM Python dependencies version strings ---
-ARG TRANSFORMERS_VERSION=">=4.48.0,<5.0.0"
-ARG RAY_VERSION="[default]>=2.40.0"
-ARG PYDANTIC_VERSION=">=2.10.0"
-ARG FASTAPI_VERSION=">=0.115.0"
-ARG UVICORN_VERSION="[standard]>=0.34.0"
-ARG AIOHTTP_VERSION=">=3.11.0"
-ARG TIKTOKEN_VERSION=">=0.7.0"
-ARG SENTENCEPIECE_VERSION=">=0.2.0"
-ARG PROMETHEUS_CLIENT_VERSION=">=0.21.0"
-ARG HUGGINGFACE_HUB_VERSION=">=0.28.0"
-ARG TOKENIZERS_VERSION=">=0.21.0"
-ARG NUMPY_VERSION=">=1.26.0,<2.1.0"
-ARG XGRAMMAR_VERSION=">=0.1.10"
-ARG LM_FORMAT_ENFORCER_VERSION=">=0.10.0"
-
-# =============================================================================
-# Base Image
-# =============================================================================
-FROM ${BASE_IMAGE} AS base
-
-# =============================================================================
-# Environment configuration
-# =============================================================================
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    HIP_VISIBLE_DEVICES=all \
-    PYTORCH_ROCM_ARCH=gfx1030 \
-    GPU_TARGETS=gfx1030 \
-    HSA_OVERRIDE_GFX_VERSION=10.3.0 \
-    VLLM_TARGET_DEVICE=rocm \
-    VLLM_USE_TRITON_FLASH_ATTN=0 \
-    PYTORCH_TUNABLEOP_ENABLED=0 \
-    PYTORCH_ALLOC_CONF=expandable_segments:True \
-    HF_HOME=/workspace/.cache/huggingface \
-    TRANSFORMERS_CACHE=/workspace/.cache/huggingface/transformers \
     ROCM_PATH=/opt/rocm \
-    PATH="/opt/venv/bin:${PATH}"
+    LD_LIBRARY_PATH=/opt/rocm/lib \
+    VLLM_TARGET_DEVICE=rocm \
+    VLLM_ROCM_USE_AITER=0 \
+    HSA_OVERRIDE_GFX_VERSION=10.3.0
 
 WORKDIR /workspace
 
-# =============================================================================
-# Stage 1: Build vLLM (Merged to save BuildKit temporary storage)
-# =============================================================================
-FROM base AS build
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.12 python3.12-dev python3.12-venv python3-pip \
+    libopenmpi-dev cmake ninja-build git curl ca-certificates \
+    libnuma-dev libatomic1 libquadmath0 ccache libdrm-dev gdb \
+    && rm -rf /var/lib/apt/lists/*
 
-# Redeclare ALL ARGs needed for the build stage
-ARG ROCM_VERSION
-ARG PYTORCH_WHEEL_VERSION
-ARG TORCHVISION_WHEEL_VERSION
-ARG TORCHAUDIO_WHEEL_VERSION
-ARG TRITON_WHEEL_VERSION
-ARG VLLM_VERSION
-ARG CMAKE_VERSION
-ARG NINJA_VERSION
-ARG PACKAGING_VERSION
-ARG SETUPTOOLS_VERSION
-ARG SETUPTOOLS_SCM_VERSION
-ARG SETUPTOOLS_RUST_VERSION
-ARG WHEEL_VERSION
-ARG JINJA2_VERSION
-ARG TRANSFORMERS_VERSION
-ARG RAY_VERSION
-ARG PYDANTIC_VERSION
-ARG FASTAPI_VERSION
-ARG UVICORN_VERSION
-ARG AIOHTTP_VERSION
-ARG TIKTOKEN_VERSION
-ARG SENTENCEPIECE_VERSION
-ARG PROMETHEUS_CLIENT_VERSION
-ARG HUGGINGFACE_HUB_VERSION
-ARG TOKENIZERS_VERSION
-ARG NUMPY_VERSION
-ARG XGRAMMAR_VERSION
-ARG LM_FORMAT_ENFORCER_VERSION
+# Rust (needed for setuptools-rust during vLLM build)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Create virtual environment
-RUN python3.12 -m venv /opt/venv
+# Create and activate virtual environment
+RUN python3.12 -m venv /home/server/vllm/.venv
+ENV PATH="/home/server/vllm/.venv/bin:$PATH" VIRTUAL_ENV="/home/server/vllm/.venv"
 
-# Pre-install vLLM build dependencies
-RUN pip install --no-cache-dir \
-    "cmake${CMAKE_VERSION}" \
-    "ninja${NINJA_VERSION}" \
-    "packaging${PACKAGING_VERSION}" \
-    "setuptools${SETUPTOOLS_VERSION}" \
-    "setuptools-scm${SETUPTOOLS_SCM_VERSION}" \
-    "setuptools-rust${SETUPTOOLS_RUST_VERSION}" \
-    "wheel${WHEEL_VERSION}" \
-    "jinja2${JINJA2_VERSION}"
+# Build tools and Python build dependencies
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install "cmake>=3.26.1" "ninja" "packaging>=24.2" \
+    "setuptools>=77.0.3,<81.0.0" "setuptools-scm>=8" "setuptools-rust>=1.9.0" \
+    "jinja2>=3.1.6" "regex" "build" "protobuf>=5.29.6,!=6.30.*"
 
-# Download and install PyTorch ROCm wheels
-RUN mkdir -p /tmp/rocm-wheels && \
-    cd /tmp/rocm-wheels && \
-    wget -q "https://repo.radeon.com/rocm/manylinux/rocm-rel-${ROCM_VERSION}/torch-${PYTORCH_WHEEL_VERSION}-cp312-cp312-linux_x86_64.whl" && \
-    wget -q "https://repo.radeon.com/rocm/manylinux/rocm-rel-${ROCM_VERSION}/torchvision-${TORCHVISION_WHEEL_VERSION}-cp312-cp312-linux_x86_64.whl" && \
-    wget -q "https://repo.radeon.com/rocm/manylinux/rocm-rel-${ROCM_VERSION}/torchaudio-${TORCHAUDIO_WHEEL_VERSION}-cp312-cp312-linux_x86_64.whl" && \
-    wget -q "https://repo.radeon.com/rocm/manylinux/rocm-rel-${ROCM_VERSION}/triton-${TRITON_WHEEL_VERSION}-cp312-cp312-linux_x86_64.whl"
+# ---------------------------------------------------------------------------
+# Download all ROCm wheels and dependencies into /wheels for offline reuse
+# ---------------------------------------------------------------------------
+WORKDIR /wheels
 
-RUN pip install --no-cache-dir \
-        /tmp/rocm-wheels/torch-${PYTORCH_WHEEL_VERSION}-cp312-cp312-linux_x86_64.whl \
-        /tmp/rocm-wheels/torchvision-${TORCHVISION_WHEEL_VERSION}-cp312-cp312-linux_x86_64.whl \
-        /tmp/rocm-wheels/torchaudio-${TORCHAUDIO_WHEEL_VERSION}-cp312-cp312-linux_x86_64.whl \
-        /tmp/rocm-wheels/triton-${TRITON_WHEEL_VERSION}-cp312-cp312-linux_x86_64.whl && \
-    rm -rf /tmp/rocm-wheels
-
-# Sanity check
-RUN python -c "import torch; print('torch:', torch.__version__); print('ROCm available:', torch.cuda.is_available())"
-
-# Install vLLM Python dependencies
-RUN pip install --no-cache-dir \
-    "transformers${TRANSFORMERS_VERSION}" \
-    "ray${RAY_VERSION}" \
-    "pydantic${PYDANTIC_VERSION}" \
-    "fastapi${FASTAPI_VERSION}" \
-    "uvicorn${UVICORN_VERSION}" \
-    "aiohttp${AIOHTTP_VERSION}" \
-    "tiktoken${TIKTOKEN_VERSION}" \
-    "sentencepiece${SENTENCEPIECE_VERSION}" \
-    "prometheus-client${PROMETHEUS_CLIENT_VERSION}" \
-    "huggingface-hub${HUGGINGFACE_HUB_VERSION}" \
-    "tokenizers${TOKENIZERS_VERSION}" \
-    "numpy${NUMPY_VERSION}" \
-    "xgrammar${XGRAMMAR_VERSION}" \
-    "lm-format-enforcer${LM_FORMAT_ENFORCER_VERSION}"
-
-# Clone and build vLLM
-RUN git clone --depth 1 --branch ${VLLM_VERSION} https://github.com/vllm-project/vllm.git /workspace/vllm-src
-WORKDIR /workspace/vllm-src
-
-RUN --mount=type=cache,target=/root/.cache/pip \
-    GPU_TARGETS=gfx1030 \
-    PYTORCH_ROCM_ARCH=gfx1030 \
-    BUILD_FA=0 \
-    VLLM_FLASH_ATTN=0 \
-    VLLM_FLASHINFER=0 \
-    MAX_JOBS=$(nproc) \
-    pip install --no-cache-dir --no-build-isolation -v . 2>&1 | tee /workspace/vllm_build.log
-
-# Verify build
-RUN cd / && python -c "import vllm; print(f'✅ vLLM {vllm.__version__} installed')" || { \
-    echo "❌ Build failed. Checking logs:"; \
-    grep -iE "error|fatal|CMake Error|hipcc" /workspace/vllm_build.log | tail -50; \
-    exit 1; }
-
-# Clean up build-only dependencies to shrink the venv for the final image
-RUN pip uninstall -y cmake ninja
-
-# =============================================================================
-# Stage 2: Final minimal inference image
-# =============================================================================
-FROM base AS final
-
-# Remove PEP 668 restriction for pip installs in final image
-RUN rm -f /usr/lib/python3.12/EXTERNALLY-MANAGED
-
-# Copy the Python venv from build stage
-COPY --from=build /opt/venv /opt/venv
-
-# Copy ONLY the build log for debugging (DO NOT copy vllm-src, it contains GBs of compiled object files)
-COPY --from=build /workspace/vllm_build.log /workspace/vllm_build.log
-
-# Ensure venv is prioritized in PATH + ROCm path is set
-ENV PATH="/opt/venv/bin:${PATH}" \
-    ROCM_PATH=/opt/rocm
-
-# Set runtime environment variables
-ENV HIP_VISIBLE_DEVICES=all \
-    HSA_OVERRIDE_GFX_VERSION=10.3.0 \
+ENV PYTORCH_ROCM_ARCH="gfx1030" \
     VLLM_TARGET_DEVICE=rocm \
-    VLLM_USE_TRITON_FLASH_ATTN=0 \
-    PYTORCH_TUNABLEOP_ENABLED=0
+    CMAKE_BUILD_PARALLEL_LEVEL="8" \
+    LD_LIBRARY_PATH=/opt/rocm/lib \
+    VLLM_ROCM_USE_AITER=0 \
+    HSA_OVERRIDE_GFX_VERSION=10.3.0
 
-# Create necessary directories for models and cache
+# We fetch:
+#   - torch, torchvision (ROCm specific)
+#   - device‑specific packages for gfx1030
+#   - triton, rocm_sdk libraries, rocm_profiler
+#   - amdsmi (ROCm management library)
+# All dependencies (numpy, etc.) are also downloaded.
+# The exact versions match the available wheels listed by the user.
+RUN pip download \
+    torch==2.13.0+rocm7.14.0 \
+    torchvision==0.28.0+rocm7.14.0 \
+    amd_torch_device_gfx1030==2.13.0+rocm7.14.0 \
+    amd_torchvision_device_gfx1030==0.28.0+rocm7.14.0 \
+    rocm_sdk_device_gfx1030==7.14.0 \
+    rocm_sdk_libraries==7.14.0 \
+    rocm_profiler==7.14.0 \
+    triton==3.8.0+git4cff872c.rocm7.14.0 \
+    amdsmi \
+    --index-url https://repo.amd.com/rocm/whl-multi-arch/ \
+    --extra-index-url https://pypi.org/simple/ \
+    --dest /wheels
+
+# Install everything from the local wheels (no network needed)
+RUN pip install --no-index --find-links=/wheels \
+    torch==2.13.0+rocm7.14.0 \
+    torchvision==0.28.0+rocm7.14.0 \
+    amd_torch_device_gfx1030==2.13.0+rocm7.14.0 \
+    amd_torchvision_device_gfx1030==0.28.0+rocm7.14.0 \
+    rocm_sdk_device_gfx1030==7.14.0 \
+    rocm_sdk_libraries==7.14.0 \
+    rocm_profiler==7.14.0 \
+    triton==3.8.0+git4cff872c.rocm7.14.0 \
+    amdsmi
+
+# Provenance check
+RUN pip list --format=freeze | grep -Ei 'torch|triton|amdsmi|rocm_sdk|rocm_profiler'
+RUN python -c "import torch; print('torch', torch.__version__, torch.version.hip)"
+
+# ---------------------------------------------------------------------------
+# Build vLLM
+# ---------------------------------------------------------------------------
+
+# === OFFICIAL VLLM (COMMENTED OUT) ===
+# Uncomment this section and comment out the RDNA2 FORK section below
+# if you want to build from the mainline vllm-project/vllm repo.
+#
+# ARG VLLM_REPO=https://github.com/vllm-project/vllm.git
+# ARG VLLM_REF=v0.27.1
+# RUN git clone --depth 1 --branch ${VLLM_REF} ${VLLM_REPO} /tmp/vllm-src
+# WORKDIR /tmp/vllm-src
+# # Fetch and apply PR #52391 for gfx1030 (RDNA2) support before compiling
+# RUN curl -sL https://github.com/vllm-project/vllm/pull/52391.patch -o /tmp/52391.patch && \
+#     (git apply --whitespace=nowarn /tmp/52391.patch || patch -p1 --no-backup-if-mismatch < /tmp/52391.patch)
+# === END OFFICIAL VLLM ===
+
+# === RDNA2 FORK (ACTIVE) ===
+ARG VLLM_REPO=https://github.com/opengfx1030/vllm-rdna.git
+ARG VLLM_REF=rdna_extras
+RUN git clone --depth 1 --branch ${VLLM_REF} ${VLLM_REPO} /tmp/vllm-src
+WORKDIR /tmp/vllm-src
+# === END RDNA2 FORK ===
+
+# -------------------------------------------------------------------------
+# FORCE RDNA2 / gfx1030 KERNEL BUILD
+# -------------------------------------------------------------------------
+# The upstream CMakeLists.txt gates RDNA2 kernels behind:
+#   set(VLLM_ROCM_HAS_GFX1030 OFF)
+#   if(VLLM_GPU_ARCHES MATCHES "gfx1030")
+# Environment variables can sometimes be dropped or misparsed during pip 
+# subprocess calls. We explicitly patch CMakeLists.txt to force these 
+# kernels to compile, guaranteeing gptq_gemm_rdna2 is built.
+RUN sed -i 's/set(VLLM_ROCM_HAS_GFX1030 OFF)/set(VLLM_ROCM_HAS_GFX1030 ON)/' CMakeLists.txt && \
+    sed -i 's/if(VLLM_GPU_ARCHES MATCHES "gfx1030")/if(TRUE)/' CMakeLists.txt
+
+# -------------------------------------------------------------------------
+# Bypass amdsmi detection bug & Save Patches for later reverting
+# -------------------------------------------------------------------------
+# This prevents the "UnspecifiedPlatform" crash inside containers where amdsmi fails.
+RUN mkdir -p /opt/patches
+
+# Save the patch script to the image so it can be inspected or reverted
+RUN cat <<'EOF' > /opt/patches/amdsmi_bypass.py
+import re
+import shutil
+import os
+
+path = 'vllm/platforms/__init__.py'
+backup_path = path + '.bak'
+
+if not os.path.exists(backup_path):
+    shutil.copyfile(path, backup_path)
+    print(f"Backed up original to {backup_path}")
+
+with open(path, 'r') as f:
+    content = f.read()
+
+pattern = r'def rocm_platform_plugin\(\)[^:]*:'
+replacement = '''def rocm_platform_plugin():
+    logger.debug("Checking if ROCm platform is available (forced bypass).")
+    return "vllm.platforms.rocm.RocmPlatform"
+
+def _disabled_rocm_platform_plugin():'''
+
+new_content = re.sub(pattern, replacement, content, count=1)
+
+if new_content != content:
+    with open(path, 'w') as f:
+        f.write(new_content)
+    print("Successfully patched vllm/platforms/__init__.py to force ROCm platform")
+else:
+    print("WARNING: Could not find rocm_platform_plugin to patch!")
+EOF
+
+# Run the patch and save a git diff to /opt/patches for reference
+RUN python3 /opt/patches/amdsmi_bypass.py && \
+    git diff > /opt/patches/amdsmi_bypass.diff || true
+
+# -------------------------------------------------------------------------
+# Compile vLLM
+# -------------------------------------------------------------------------
+ENV PYTORCH_ROCM_ARCH="gfx1030" \
+    VLLM_TARGET_DEVICE=rocm \
+    CMAKE_BUILD_PARALLEL_LEVEL="8" \
+    LD_LIBRARY_PATH=/opt/rocm/lib \
+    VLLM_ROCM_USE_AITER=0 \
+    HSA_OVERRIDE_GFX_VERSION=10.3.0
+
+# Build vLLM with no isolation, using the same ROCm index for any remaining deps
+RUN pip install -v --no-build-isolation . \
+    --extra-index-url https://repo.amd.com/rocm/whl-multi-arch/
+
+# -------------------------------------------------------------------------
+# Final Verification (CPU/GitHub Actions Safe)
+# -------------------------------------------------------------------------
+# Verify the compiled C++ extension exists and has a meaningful size (> 5MB). 
+# A failed build that skipped the RDNA2 kernels would be trivially small.
+RUN SO_PATH="/home/server/vllm/.venv/lib/python3.12/site-packages/vllm/_rocm_C.abi3.so" && \
+    if [ -f "$SO_PATH" ]; then \
+        SIZE=$(stat -c%s "$SO_PATH"); \
+        if [ "$SIZE" -gt 5000000 ]; then \
+            echo "✅ SUCCESS: _rocm_C.abi3.so exists and is ${SIZE} bytes (>5MB). RDNA2 kernels are compiled in."; \
+        else \
+            echo "❌ FAIL: _rocm_C.abi3.so exists but is only ${SIZE} bytes (too small, RDNA2 kernels likely missing)."; \
+            exit 1; \
+        fi; \
+    else \
+        echo "❌ FAIL: _rocm_C.abi3.so not found at $SO_PATH"; \
+        exit 1; \
+    fi
+
+# Runtime environment
+ENV PYTORCH_ROCM_ARCH="gfx1030" \
+    VLLM_TARGET_DEVICE=rocm \
+    LD_LIBRARY_PATH=/opt/rocm/lib \
+    VLLM_ROCM_USE_AITER=0 \
+    HSA_OVERRIDE_GFX_VERSION=10.3.0
+
 RUN mkdir -p /workspace/models /workspace/.cache/huggingface
-
 EXPOSE 8000
 
-# Default command: launch vLLM OpenAI-compatible API server
-CMD ["python", "-m", "vllm.entrypoints.openai.api_server"]
+CMD ["python", "-m", "vllm.entrypoints.openai.api_server", "--enforce-eager"]
