@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BASE_IMAGE_NAME: ${{ github.repository_owner }}/rocm-base
+  BASE_IMAGE_NAME: ${{ github.repository }}/rocm-base
   FINAL_IMAGE_NAME: ${{ github.repository }}/rocm-dev
 
 jobs:
