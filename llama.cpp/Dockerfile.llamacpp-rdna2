@@ -1,0 +1,66 @@
+# Add ARG to accept the base image dynamically
+ARG BASE_IMAGE=rocm-base
+FROM ${BASE_IMAGE}
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Fix GitHub Issue #25807: 
+# Recent ROCm packaging sometimes fails to register /opt/rocm/lib with the dynamic loader.
+# Prepending this ensures libhipblas.so and other ROCm libs are found at runtime.
+ENV LD_LIBRARY_PATH=/opt/rocm/core-7.14/lib:$LD_LIBRARY_PATH
+
+WORKDIR /app
+
+################################################################################
+# FORKED BUILD: edwinbrowwn/llama.cpp-rdna2 (Recommended for AMD RDNA2/3 GPUs)
+################################################################################
+# This fork keeps the RDNA2 (gfx1030) and RDNA3 (gfx1100) paths separate.
+# It includes optimizations for speculative decoding, Qwen cache bugs, and native kernels.
+RUN git clone --depth 1 https://github.com/edwinbrowwn/llama.cpp-rdna2.git /app/llama.cpp
+
+WORKDIR /app/llama.cpp
+
+# Build the forked llama.cpp with HIP support
+#
+# CPU Flag Optimizations for AVX2/Haswell Architecture:
+# -DGGML_AVX512=OFF: Disables AVX-512. Prevents thermal throttling and handles CPUs lacking 512-bit support.
+# -DGGML_AVX2=ON: Enables AVX2 (256-bit SIMD). Essential for fast vectorized math.
+# -DGGML_AVX=ON: Enables AVX (128-bit SIMD).
+# -DGGML_FMA=ON: Enables Fused Multiply-Add. Speeds up GEMM and reduces rounding errors.
+# -DGGML_F16C=ON: Enables F16C. Accelerates conversion between 16-bit and 32-bit floats.
+# -DGGML_BMI2=ON: Enables BMI2. Speeds up unpacking quantized weights (Q4_K_M, Q8_0).
+
+RUN LD_LIBRARY_PATH=/opt/rocm/core-7.14/lib:$LD_LIBRARY_PATH \
+    HSA_OVERRIDE_GFX_VERSION=10.3.0 \
+    HIPCXX="$(hipconfig -l)/clang" \
+    HIP_PATH="$(hipconfig -R)" \
+    cmake -S . -B build \
+        -DGGML_HIP=ON \
+        -DGPU_TARGETS=gfx1030 \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DGGML_CUDA_FA_ALL_QUANTS=ON \
+        -DGGML_CURL=OFF \
+        -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_CXX_FLAGS="-march=haswell" \
+        -DCMAKE_C_FLAGS="-march=haswell" \
+        -DGGML_AVX512=OFF \
+        -DGGML_AVX2=ON \
+        -DGGML_AVX=ON \
+        -DGGML_FMA=ON \
+        -DGGML_F16C=ON \
+        -DGGML_BMI2=ON \
+    && cmake --build build --config Release --target llama-server llama-cli llama-bench -- -j $(nproc)
+
+# Add fork-specific environment variables for RDNA2 runtime optimizations (from fork docs)
+# GGML_HIP_RDNA2_AUTO=1 automatically enables RDNA2 specific kernel paths.
+# HSA_NO_SCRATCH_RECLAIM=1 prevents ROCm from aggressively reclaiming scratch memory, avoiding latency spikes.
+ENV GGML_HIP_RDNA2_AUTO=1
+ENV HSA_NO_SCRATCH_RECLAIM=1
+ENV GGML_HIP_SAFE_STATE_IO=1
+
+# Set PATH
+ENV PATH="/app/llama.cpp/build/bin:${PATH}"
+
+WORKDIR /app
+
+CMD ["/bin/bash"]
