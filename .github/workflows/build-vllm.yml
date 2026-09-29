@@ -11,7 +11,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BASE_IMAGE_NAME: ${{ github.repository_owner }}/rocm-base
+  BASE_IMAGE_NAME: ${{ github.repository }}/rocm-base
   IMAGE_NAME: ${{ github.repository }}/vllm-gfx1030
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Opt-into Node 24 to suppress deprecation warnings
 
