@@ -1,18 +1,18 @@
-name: ROCm 7.2.x Base Image
+name: ROCm 10.x Base Image
 
 on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
   
-  # Automatically runs when you push changes to Dockerfile.base
+  # Automatically runs when you push changes to Dockerfile.rocm10
   push:
     paths:
-      - 'Dockerfile.base'
-      - '.github/workflows/build-base.yml'
+      - 'Dockerfile.rocm10'
+      - '.github/workflows/build-base-rocm10.yml'
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/rocm-base
+  IMAGE_NAME: ${{ github.repository }}/rocm-base-10
 
 jobs:
   build-and-push:
@@ -73,10 +73,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.base
+          file: ./Dockerfile.rocm10
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Caches the layers to speed up future builds
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
