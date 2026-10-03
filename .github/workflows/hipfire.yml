@@ -1,18 +1,18 @@
-name: Build Hipfire ROCm gfx1030
+name: Hipfire ROCm gfx1030
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * *' # Runs at 00:00 UTC
+  #schedule:
+  #  - cron: '0 0 * * *' # Runs at 00:00 UTC
   push:
     paths:
       - 'hipfire/*/**'
       - 'hipfire/*'
-      - '.github/workflows/build-hipfire.yml'
+      - '.github/workflows/hipfire.yml'
 
 env:
   REGISTRY: ghcr.io
-  BASE_IMAGE_NAME: ${{ github.repository }}/rocm-base
+  BASE_IMAGE_NAME: ${{ github.repository }}/rocm7-base
   IMAGE_NAME: ${{ github.repository }}/hipfire-gfx1030
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Opt-into Node 24 to suppress deprecation warnings
 
