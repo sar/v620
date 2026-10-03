@@ -6,7 +6,7 @@
 
 **v620 Solutions Library** is a containerized CI/CD build system that compiles **vLLM v0.28.x**, **llama.cpp**, and **HipFire** from source against **ROCm 7.x.x** for **AMD Radeon PRO V620** and RDNA2 GPUS (gfx1030 target). Currently, two seperate images are published to the GitHub Container Registry on every commit:
 
-- **`v620/rocm-base`** – ROCm 7.x.x + build toolchain + Bun/Rust [![Build and Publish Base Image](https://github.com/sar/v620/actions/workflows/build-base.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-base.yml)
+- **`v620/rocm7-base`** – ROCm 7.x.x + build toolchain + Bun/Rust [![Build and Publish Base Image](https://github.com/sar/v620/actions/workflows/build-base.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-base.yml)
 - **`v620/rocm-dev`** - Development image with C tools deps baked-in [![Build and Publish Dev Environment Image](https://github.com/sar/v620/actions/workflows/build-dev.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-dev.yml)
 - **`v620/amd-validation`** - AMD GPU testing libraries and utils (RCCL, Memtest, etc) [![Build and Publish AMD GPU Validation Image](https://github.com/sar/v620/actions/workflows/build-amd-validation.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-amd-validation.yml)
 - **`v620/vllm-gfx1030`** – Compiled vLLM + PyTorch + Triton for RDNA2 inference [![Build vLLM ROCm gfx1030](https://github.com/sar/v620/actions/workflows/build-vllm.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/build-vllm.yml) 
@@ -42,7 +42,7 @@ v620/
 ├── vllm/
 │   └── Dockerfile               # Multi-stage vLLM build
 └── .github/workflows/
-    ├── build-base.yml           # Build & push rocm-base image
+    ├── build-base.yml           # Build & push rocm7-base image
     └── build-vllm.yml           # Build & push vllm-gfx1030 image
 ```
 
@@ -57,7 +57,7 @@ rocm/dev-ubuntu-24.04:7.2.x-complete (public AMD ROCm base)
          ↓
     Dockerfile.base
          ↓
-  v620/rocm-base:latest (ghcr.io/sar/v620/rocm-base)
+  v620/rocm7-base:latest (ghcr.io/sar/v620/rocm7-base)
          ↓
    vllm/Dockerfile (uses BASE_IMAGE arg)
          ↓
@@ -198,7 +198,7 @@ Default CMD: python -m vllm.entrypoints.openai.api_server
 
 | Workflow | Triggers | Registry Path |
 |----------|----------|---------------|
-| `build-base.yml` | Push to `Dockerfile.base` OR manual workflow_dispatch | `ghcr.io/sar/v620/rocm-base` |
+| `build-base.yml` | Push to `Dockerfile.base` OR manual workflow_dispatch | `ghcr.io/sar/v620/rocm7-base` |
 | `build-vllm.yml` | Push to `vllm/Dockerfile` OR manual workflow_dispatch | `ghcr.io/sar/v620/vllm-gfx1030` |
 
 ### Resource Management
