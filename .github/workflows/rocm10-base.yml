@@ -8,11 +8,11 @@ on:
   push:
     paths:
       - 'Dockerfile.rocm10'
-      - '.github/workflows/build-base-rocm10.yml'
+      - '.github/workflows/rocm10-base.yml'
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/rocm-base-10
+  IMAGE_NAME: ${{ github.repository }}/rocm10-base
 
 jobs:
   build-and-push:
