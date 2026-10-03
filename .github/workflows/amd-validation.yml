@@ -1,4 +1,4 @@
-name: Build and Publish AMD GPU Validation Image
+name: AMD GPU Validation Tools
 
 on:
   workflow_dispatch:
@@ -78,5 +78,4 @@ jobs:
             BASE_IMAGE=${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=min
+
