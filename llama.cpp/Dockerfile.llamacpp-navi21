@@ -1,0 +1,75 @@
+# Add ARG to accept the base image dynamically
+ARG BASE_IMAGE=rocm10-base
+FROM ${BASE_IMAGE}
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Fix GitHub Issue #25807: 
+# Recent ROCm packaging sometimes fails to register /opt/rocm/lib with the dynamic loader.
+# Prepending this ensures libhipblas.so and other ROCm libs are found at runtime.
+ENV LD_LIBRARY_PATH=/opt/rocm/core-7.14/lib:$LD_LIBRARY_PATH
+
+WORKDIR /workspace
+
+################################################################################
+# FORKED BUILD: sixvolts/llama-navi21-furnace (Tuned for AMD Navi 21 / RDNA2)
+################################################################################
+# This fork targets the Radeon PRO V620 (gfx1030) and includes custom RDNA2 tile 
+# configurations for flash attention, optimized quantized matmul, and speculative 
+# decoding features like adaptive draft lengths.
+RUN git clone --depth 1 https://github.com/sixvolts/llama-navi21-furnace.git /workspace/llama.cpp
+
+WORKDIR /workspace/llama.cpp
+
+# Build the forked llama.cpp with HIP support
+#
+# CPU Flag Optimizations for AVX2/Haswell Architecture:
+# -DGGML_AVX512=OFF: Disables AVX-512. Prevents thermal throttling and handles CPUs lacking 512-bit support.
+# -DGGML_AVX2=ON: Enables AVX2 (256-bit SIMD). Essential for fast vectorized math.
+# -DGGML_AVX=ON: Enables AVX (128-bit SIMD).
+# -DGGML_FMA=ON: Enables Fused Multiply-Add. Speeds up GEMM and reduces rounding errors.
+# -DGGML_F16C=ON: Enables F16C. Accelerates conversion between 16-bit and 32-bit floats.
+# -DGGML_BMI2=ON: Enables BMI2. Speeds up unpacking quantized weights (Q4_K_M, Q8_0).
+#
+# Fork-Specific Navi 21 (gfx1030) Build Flags:
+# -DAMDGPU_TARGETS=gfx1030 & -DGPU_TARGETS=gfx1030: Explicitly targets the RDNA2 architecture.
+# -DGGML_HIP_ROCWMMA_FATTN=OFF: Disables ROCWMMA for flash attention, avoiding upstream occupancy 
+#   aborts on RDNA2's register file for large head sizes. The fork provides custom RDNA2 tiles instead.
+
+RUN LD_LIBRARY_PATH=/opt/rocm/core-7.14/lib:$LD_LIBRARY_PATH \
+    HSA_OVERRIDE_GFX_VERSION=10.3.0 \
+    HIPCXX="$(hipconfig -l)/clang" \
+    HIP_PATH="$(hipconfig -R)" \
+    cmake -S . -B build \
+        -DGGML_HIP=ON \
+        -DAMDGPU_TARGETS=gfx1030 \
+        -DGPU_TARGETS=gfx1030 \
+        -DGGML_HIP_ROCWMMA_FATTN=OFF \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DGGML_CUDA_FA_ALL_QUANTS=ON \
+        -DLLAMA_CURL=OFF \
+        -DGGML_CURL=OFF \
+        -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_CXX_FLAGS="-march=haswell" \
+        -DCMAKE_C_FLAGS="-march=haswell" \
+        -DGGML_AVX512=OFF \
+        -DGGML_AVX2=ON \
+        -DGGML_AVX=ON \
+        -DGGML_FMA=ON \
+        -DGGML_F16C=ON \
+        -DGGML_BMI2=ON \
+    && cmake --build build --config Release --target llama-server llama-cli llama-bench llama-quantize llama-perplexity -- -j $(nproc)
+
+# Fork-specific runtime optimizations for long context inference and Navi 21
+# HSA_NO_SCRATCH_RECLAIM=1 prevents ROCm from aggressively reclaiming scratch memory, avoiding latency spikes during long inference.
+# HSA_OVERRIDE_GFX_VERSION=10.3.0 is exposed as an ENV just in case you run this on a consumer RDNA2 card (like 6800/6900XT) 
+# rather than the officially supported Radeon PRO V620.
+ENV HSA_NO_SCRATCH_RECLAIM=1
+ENV HSA_OVERRIDE_GFX_VERSION=10.3.0
+
+# Set PATH
+ENV PATH="/workspace/llama.cpp/build/bin:${PATH}"
+
+WORKDIR /workspace
+
+CMD ["/bin/bash"]
