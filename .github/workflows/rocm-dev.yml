@@ -5,7 +5,7 @@ on:
   push:
     paths:
       - 'Dockerfile.dev'
-      - '.github/workflows/build-dev.yml'
+      - '.github/workflows/rocm-dev.yml'
 
 env:
   REGISTRY: ghcr.io
