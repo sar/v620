@@ -1,4 +1,4 @@
-name: Build vLLM Source ROCm Image
+name: vLLM Source ROCm Image
 
 on:
   # Allows you to run this workflow manually from the Actions tab
@@ -11,7 +11,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BASE_IMAGE_NAME: ${{ github.repository }}/rocm-base
+  BASE_IMAGE_NAME: ${{ github.repository }}/rocm7-base
   IMAGE_NAME: ${{ github.repository }}/vllm-gfx1030
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Opt-into Node 24 to suppress deprecation warnings
 

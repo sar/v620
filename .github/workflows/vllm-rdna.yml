@@ -1,4 +1,4 @@
-name: Build vLLM RDNA2 Qwen4 Arch Fork
+name: vLLM RDNA2 Extras Fork
 
 on:
   # Allows you to run this workflow manually from the Actions tab
@@ -7,12 +7,12 @@ on:
   # Automatically runs when you push changes to Dockerfile.base
   push:
     paths:
-      - 'vllm/Dockerfile.vllm_rdna_qwen'
+      - 'vllm/Dockerfile.vllm_rdna'
 
 env:
   REGISTRY: ghcr.io
-  BASE_IMAGE_NAME: ${{ github.repository }}/rocm-base
-  IMAGE_NAME: ${{ github.repository }}/vllm-rdna-qwen
+  BASE_IMAGE_NAME: ${{ github.repository }}/rocm7-base
+  IMAGE_NAME: ${{ github.repository }}/vllm-rdna
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Opt-into Node 24 to suppress deprecation warnings
 
 jobs:
@@ -74,7 +74,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./vllm/Dockerfile.vllm_rdna_qwen
+          file: ./vllm/Dockerfile.vllm_rdna
           push: true
           build-args: |
             BASE_IMAGE=${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:latest
