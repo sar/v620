@@ -1,5 +1,5 @@
 # Add ARG to accept the base image dynamically
-ARG BASE_IMAGE=rocm-base
+ARG BASE_IMAGE=rocm10-base
 FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -9,16 +9,16 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Prepending this ensures libhipblas.so and other ROCm libs are found at runtime.
 ENV LD_LIBRARY_PATH=/opt/rocm/core-7.14/lib:$LD_LIBRARY_PATH
 
-WORKDIR /app
+WORKDIR /workspace
 
 ################################################################################
 # FORKED BUILD: edwinbrowwn/llama.cpp-rdna2 (Recommended for AMD RDNA2/3 GPUs)
 ################################################################################
 # This fork keeps the RDNA2 (gfx1030) and RDNA3 (gfx1100) paths separate.
 # It includes optimizations for speculative decoding, Qwen cache bugs, and native kernels.
-RUN git clone --depth 1 https://github.com/edwinbrowwn/llama.cpp-rdna2.git /app/llama.cpp
+RUN git clone --depth 1 https://github.com/edwinbrowwn/llama.cpp-rdna2.git /workspace/llama.cpp
 
-WORKDIR /app/llama.cpp
+WORKDIR /workspace/llama.cpp
 
 # Build the forked llama.cpp with HIP support
 #
@@ -59,8 +59,8 @@ ENV HSA_NO_SCRATCH_RECLAIM=1
 ENV GGML_HIP_SAFE_STATE_IO=1
 
 # Set PATH
-ENV PATH="/app/llama.cpp/build/bin:${PATH}"
+ENV PATH="/workspace/llama.cpp/build/bin:${PATH}"
 
-WORKDIR /app
+WORKDIR /workspace
 
 CMD ["/bin/bash"]

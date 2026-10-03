@@ -1,4 +1,4 @@
-name: Build Llama.cpp RDNA2 Fork Image
+name: Llama.cpp RDNA2 Fork Image
 
 on:
   workflow_dispatch:
@@ -6,13 +6,12 @@ on:
   #  - cron: '0 0 * * *' # Runs every day at Midnight UTC
   push:
     paths:
-      - 'llama.cpp/**'
-      - 'llama.cpp/*'
-      - '.github/workflows/build-llama-cpp.yml'
+      - 'llama.cpp/Dockerfile.llamacpp-rdna2'
+      - '.github/workflows/llamacpp-rdna2.yml'
 
 env:
   REGISTRY: ghcr.io
-  BASE_IMAGE_NAME: ${{ github.repository }}/rocm-base
+  BASE_IMAGE_NAME: ${{ github.repository }}/rocm10-base
   FINAL_IMAGE_NAME: ${{ github.repository }}/llama-cpp-rdna2
 
 jobs:
