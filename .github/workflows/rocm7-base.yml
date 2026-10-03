@@ -7,12 +7,12 @@ on:
   # Automatically runs when you push changes to Dockerfile.base
   push:
     paths:
-      - 'Dockerfile.base'
-      - '.github/workflows/build-base.yml'
+      - 'Dockerfile.rocm7'
+      - '.github/workflows/rocm7-base.yml'
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/rocm-base
+  IMAGE_NAME: ${{ github.repository }}/rocm7-base
 
 jobs:
   build-and-push:
@@ -73,10 +73,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.base
+          file: ./Dockerfile.rocm7
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Caches the layers to speed up future builds
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
