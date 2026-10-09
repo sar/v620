@@ -32,7 +32,8 @@ RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt || \
     pip3 install --no-cache-dir -r requirements.txt
 
 # 4. Build Strata with HIP support for AMD RDNA2 (gfx1030)
-# Flags extracted directly from setup.py's build_engine_hip() logic
+# We force GGML_NATIVE=OFF and STRATA_PORTABLE=ON to ensure no AVX-512 instructions
+# are injected by the cloud runner's CPU, gating runner on Haswell/Broadwell.
 RUN LD_LIBRARY_PATH=/opt/rocm/core-10.0/lib:$LD_LIBRARY_PATH \
     HSA_OVERRIDE_GFX_VERSION=10.3.0 \
     HIP_PLATFORM=amd \
@@ -47,12 +48,21 @@ RUN LD_LIBRARY_PATH=/opt/rocm/core-10.0/lib:$LD_LIBRARY_PATH \
         -DSTRATA_ENABLE_CUDA=OFF \
         -DSTRATA_BUILD_TESTS=OFF \
         -DSTRATA_PREFILL_MMQ=ON \
+        -DSTRATA_PORTABLE=ON \
         -DCMAKE_HIP_ARCHITECTURES=gfx1030 \
         -DCMAKE_HIP_COMPILER=/opt/rocm/llvm/bin/clang++ \
         -DCMAKE_HIP_COMPILER_ROCM_ROOT=/opt/rocm \
         -DCMAKE_PREFIX_PATH=/opt/rocm \
         -DCMAKE_HIP_FLAGS="--rocm-path=/opt/rocm --rocm-device-lib-path=/opt/rocm/lib/llvm/amdgcn/bitcode" \
         -DSTRATA_GGML_DIR=/workspace/llama.cpp \
+        -DGGML_NATIVE=OFF \
+        -DGGML_AVX2=ON \
+        -DGGML_AVX=ON \
+        -DGGML_FMA=ON \
+        -DGGML_F16C=ON \
+        -DGGML_BMI2=ON \
+        -DGGML_AVX512=OFF \
+        -DGGML_STATIC=OFF \
     && cmake --build build-hip --target strata -- -j $(nproc)
 
 # Set PATH and environment variables for running Strata
