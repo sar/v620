@@ -46,13 +46,7 @@ ENV PYTORCH_ROCM_ARCH="gfx1030" \
     VLLM_ROCM_USE_AITER=0 \
     HSA_OVERRIDE_GFX_VERSION=10.3.0
 
-# We fetch:
-#   - torch, torchvision (ROCm specific)
-#   - device‑specific packages for gfx1030
-#   - triton, rocm_sdk libraries, rocm_profiler
-#   - amdsmi (ROCm management library)
-# All dependencies (numpy, etc.) are also downloaded.
-# The exact versions match the available wheels listed by the user.
+# Fetch PyTorch/ROCm specific wheels
 RUN pip download \
     torch==2.13.0+rocm7.14.0 \
     torchvision==0.28.0+rocm7.14.0 \
@@ -65,10 +59,10 @@ RUN pip download \
     amdsmi \
     --index-url https://repo.amd.com/rocm/whl-multi-arch/ \
     --extra-index-url https://pypi.org/simple/ \
-    --dest /wheels
+    --dest /wheels/rocm
 
 # Install everything from the local wheels (no network needed)
-RUN pip install --no-index --find-links=/wheels \
+RUN pip install --no-index --find-links=/wheels/rocm \
     torch==2.13.0+rocm7.14.0 \
     torchvision==0.28.0+rocm7.14.0 \
     amd_torch_device_gfx1030==2.13.0+rocm7.14.0 \
@@ -95,21 +89,26 @@ WORKDIR /tmp/vllm-src
 # === END RDNA2 FORK ===
 
 # -------------------------------------------------------------------------
+# CACHE VLLM PYTHON DEPENDENCIES FOR OFFLINE BUILD
+# -------------------------------------------------------------------------
+# Download common and rocm requirements to a local wheel cache so the 
+# editable install doesn't hit the network.
+RUN mkdir -p /wheels/vllm && \
+    pip download -r requirements/common.txt --dest /wheels/vllm && \
+    pip download -r requirements/rocm.txt --dest /wheels/vllm && \
+    pip download "numpy>=1.25,<2.4" --dest /wheels/vllm
+
+# -------------------------------------------------------------------------
 # FORCE RDNA2 / gfx1030 KERNEL BUILD
 # -------------------------------------------------------------------------
-# The upstream CMakeLists.txt gates RDNA2 kernels behind:
-#   set(VLLM_ROCM_HAS_GFX1030 OFF)
-#   if(VLLM_GPU_ARCHES MATCHES "gfx1030")
-# Environment variables can sometimes be dropped or misparsed during pip 
-# subprocess calls. We explicitly patch CMakeLists.txt to force these 
-# kernels to compile, guaranteeing gptq_gemm_rdna2 is built.
 RUN sed -i 's/set(VLLM_ROCM_HAS_GFX1030 OFF)/set(VLLM_ROCM_HAS_GFX1030 ON)/' CMakeLists.txt && \
     sed -i 's/if(VLLM_GPU_ARCHES MATCHES "gfx1030")/if(TRUE)/' CMakeLists.txt
 
 # -------------------------------------------------------------------------
-# Bypass amdsmi detection bug & Save Patches for later reverting
+# Bypass amdsmi detection bug (CRITICAL FOR GPU-LESS RUNNERS)
 # -------------------------------------------------------------------------
-# This prevents the "UnspecifiedPlatform" crash inside containers where amdsmi fails.
+# This prevents the "UnspecifiedPlatform" crash inside containers where 
+# amdsmi fails because no physical GPU is present during the build phase.
 RUN mkdir -p /opt/patches
 
 # Save the patch script to the image so it can be inspected or reverted
@@ -150,27 +149,27 @@ RUN python3 /opt/patches/amdsmi_bypass.py && \
     git diff > /opt/patches/amdsmi_bypass.diff || true
 
 # -------------------------------------------------------------------------
-# Compile vLLM
+# Compile vLLM (Editable Install)
 # -------------------------------------------------------------------------
 ENV PYTORCH_ROCM_ARCH="gfx1030" \
     VLLM_TARGET_DEVICE=rocm \
     CMAKE_BUILD_PARALLEL_LEVEL="8" \
     LD_LIBRARY_PATH=/opt/rocm/lib \
     VLLM_ROCM_USE_AITER=0 \
-    HSA_OVERRIDE_GFX_VERSION=10.3.0
+    HSA_OVERRIDE_GFX_VERSION=10.3.0 \
+    MAX_JOBS=8
 
-# Build vLLM with no isolation, using the same ROCm index for any remaining deps
-# EDITABLE INSTALL (-e) added as requested
-RUN pip install -v -e . \
-    --extra-index-url https://repo.amd.com/rocm/whl-multi-arch/
+# CRITICAL: --no-build-isolation ensures CMake sees the ROCm PyTorch installed in the venv.
+RUN pip install -v -e . --no-build-isolation
+
+# Install runtime dependencies completely offline from our wheel cache
+RUN pip install --no-index --find-links=/wheels/vllm -r requirements/common.txt --no-deps && \
+    pip install --no-index --find-links=/wheels/vllm -r requirements/rocm.txt --no-deps && \
+    pip install --no-index --find-links=/wheels/vllm "numpy>=1.25,<2.4"
 
 # -------------------------------------------------------------------------
 # Final Verification (CPU/GitHub Actions Safe)
 # -------------------------------------------------------------------------
-# Verify the compiled C++ extension exists and has a meaningful size (> 5MB). 
-# A failed build that skipped the RDNA2 kernels would be trivially small.
-# NOTE: Path updated to /tmp/vllm-src/vllm/ because editable installs (-e) 
-# keep the compiled .so files in the source tree instead of site-packages.
 RUN SO_PATH="/tmp/vllm-src/vllm/_rocm_C.abi3.so" && \
     if [ -f "$SO_PATH" ]; then \
         SIZE=$(stat -c%s "$SO_PATH"); \
@@ -191,7 +190,8 @@ ENV PYTORCH_ROCM_ARCH="gfx1030" \
     LD_LIBRARY_PATH=/opt/rocm/lib \
     VLLM_ROCM_USE_AITER=0 \
     HSA_OVERRIDE_GFX_VERSION=10.3.0 \
-    PYTHONPATH=/home/server/vllm/.venv/lib/python3.12/site-packages:$PYTHONPATH
+    PYTHONPATH=/home/server/vllm/.venv/lib/python3.12/site-packages:$PYTHONPATH \
+    COMPILE_CACHE_OFF=0
 
 # Set workdir to /root at the end as requested
 WORKDIR /root

@@ -87,25 +87,17 @@ RUN python -c "import torch; print('torch', torch.__version__, torch.version.hip
 # Build vLLM
 # ---------------------------------------------------------------------------
 
-# === OFFICIAL VLLM (COMMENTED OUT) ===
-# Uncomment this section and comment out the RDNA2 FORK section below
-# if you want to build from the mainline vllm-project/vllm repo.
-#
-# ARG VLLM_REPO=https://github.com/vllm-project/vllm.git
-# ARG VLLM_REF=v0.27.1
-# RUN git clone --depth 1 --branch ${VLLM_REF} ${VLLM_REPO} /tmp/vllm-src
-# WORKDIR /tmp/vllm-src
-# # Fetch and apply PR #52391 for gfx1030 (RDNA2) support before compiling
-# RUN curl -sL https://github.com/vllm-project/vllm/pull/52391.patch -o /tmp/52391.patch && \
-#     (git apply --whitespace=nowarn /tmp/52391.patch || patch -p1 --no-backup-if-mismatch < /tmp/52391.patch)
-# === END OFFICIAL VLLM ===
+# === OFFICIAL VLLM ===
 
-# === RDNA2 FORK (ACTIVE) ===
-ARG VLLM_REPO=https://github.com/opengfx1030/vllm-rdna.git
-ARG VLLM_REF=rdna_extras
+ARG VLLM_REPO=https://github.com/vllm-project/vllm.git
+ARG VLLM_REF=v0.29.0
 RUN git clone --depth 1 --branch ${VLLM_REF} ${VLLM_REPO} /tmp/vllm-src
 WORKDIR /tmp/vllm-src
-# === END RDNA2 FORK ===
+# Fetch and apply PR #52391 for gfx1030 (RDNA2) support before compiling
+# RUN curl -sL https://github.com/vllm-project/vllm/pull/52391.patch -o /tmp/52391.patch && \
+#     (git apply --whitespace=nowarn /tmp/52391.patch || patch -p1 --no-backup-if-mismatch < /tmp/52391.patch)
+
+# === END OFFICIAL VLLM ===
 
 # -------------------------------------------------------------------------
 # FORCE RDNA2 / gfx1030 KERNEL BUILD
@@ -173,7 +165,8 @@ ENV PYTORCH_ROCM_ARCH="gfx1030" \
     HSA_OVERRIDE_GFX_VERSION=10.3.0
 
 # Build vLLM with no isolation, using the same ROCm index for any remaining deps
-RUN pip install -v --no-build-isolation . \
+# EDITABLE INSTALL (-e) added as requested
+RUN pip install -v -e . \
     --extra-index-url https://repo.amd.com/rocm/whl-multi-arch/
 
 # -------------------------------------------------------------------------
@@ -181,7 +174,9 @@ RUN pip install -v --no-build-isolation . \
 # -------------------------------------------------------------------------
 # Verify the compiled C++ extension exists and has a meaningful size (> 5MB). 
 # A failed build that skipped the RDNA2 kernels would be trivially small.
-RUN SO_PATH="/home/server/vllm/.venv/lib/python3.12/site-packages/vllm/_rocm_C.abi3.so" && \
+# NOTE: Path updated to /tmp/vllm-src/vllm/ because editable installs (-e) 
+# keep the compiled .so files in the source tree instead of site-packages.
+RUN SO_PATH="/tmp/vllm-src/vllm/_rocm_C.abi3.so" && \
     if [ -f "$SO_PATH" ]; then \
         SIZE=$(stat -c%s "$SO_PATH"); \
         if [ "$SIZE" -gt 5000000 ]; then \
@@ -200,7 +195,11 @@ ENV PYTORCH_ROCM_ARCH="gfx1030" \
     VLLM_TARGET_DEVICE=rocm \
     LD_LIBRARY_PATH=/opt/rocm/lib \
     VLLM_ROCM_USE_AITER=0 \
-    HSA_OVERRIDE_GFX_VERSION=10.3.0
+    HSA_OVERRIDE_GFX_VERSION=10.3.0 \
+    PYTHONPATH=/home/server/vllm/.venv/lib/python3.12/site-packages:$PYTHONPATH
+
+# Set workdir to /root at the end as requested
+WORKDIR /root
 
 RUN mkdir -p /workspace/models /workspace/.cache/huggingface
 EXPOSE 8000
