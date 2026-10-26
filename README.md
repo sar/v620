@@ -6,7 +6,6 @@
 
 **v620 Solutions Library** is a containerized CI/CD build system that compiles **vLLM v0.28.x**, **llama.cpp**, and **HipFire** from source against **ROCm 7.x.x** for **AMD Radeon PRO V620** and RDNA2 GPUS (gfx1030 target). Currently, two seperate images are published to the GitHub Container Registry on every commit:
 
-- **`v620/rocm7-base`** – ROCm 7.x.x + build toolchain + Bun/Rust [![ROCm 7.2.x Base Image](https://github.com/sar/v620/actions/workflows/rocm7-base.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/rocm7-base.yml)
 - **`v620/rocm10-base`** – ROCm 10.x.x + build toolchain + Bun/Rust [![ROCm 10.x Base Image](https://github.com/sar/v620/actions/workflows/rocm10-base.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/rocm10-base.yml)
 - **`v620/rocm-dev`** - Development image with C tools deps baked-in [![Dev Tools Env Image](https://github.com/sar/v620/actions/workflows/rocm-dev.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/rocm-dev.yml)
 - **`v620/amd-validation`** - AMD GPU testing libraries and utils (RCCL, Memtest, etc) [![AMD GPU Validation Tools](https://github.com/sar/v620/actions/workflows/amd-validation.yml/badge.svg)](https://github.com/sar/v620/actions/workflows/amd-validation.yml)
