@@ -1,5 +1,5 @@
 # Add ARG to accept the base image dynamically
-ARG BASE_IMAGE=rocm7-base
+ARG BASE_IMAGE=rocm10-base
 FROM ${BASE_IMAGE}
 
 # SET workdir
